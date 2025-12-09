@@ -223,7 +223,6 @@ router.post(
  *
  * start break, fetch break and record start time, add to session
  */
-
 router.post(
   "/:id/breaks/start",
   async (req: Request, res: Response, next: NextFunction) => {
@@ -414,13 +413,12 @@ router.post(
     }
   }
 );
+
 /**
- *
  * GET API/SESSION/:ID
  *
  * get session activty such as breaks focus time
  */
-// GET session activity
 router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
   // Extract user from request
   const { user } = req as AuthRequest;
