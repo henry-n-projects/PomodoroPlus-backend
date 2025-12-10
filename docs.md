@@ -22,7 +22,7 @@ Response 200
 
 ## Auth:
 
-Google OAuth:
+- Google OAuth:
 
 GET /api/auth/google
 Behaviour: Start Google login
@@ -30,7 +30,7 @@ Purpose: Redirects user to Google login
 Auth: Not required
 Response: 200 redirect to Google
 
-Google callback:
+- Google callback:
 
 GET /api/auth/google/callback
 Purpose: Google redirects back here after login
@@ -46,7 +46,7 @@ Redirects to frontend: process.env.FRONTEND_URL
 On failure:
 Redirects to /login
 
-Get current user:
+- Get current user:
 
 GET /api/auth/me
 Purpose: Get the currently logged-in user
@@ -80,7 +80,7 @@ Behaviour: Redirects to /
 
 GET /api/dashboard
 - Purpose: Fetch all data needed to render the user's dashboard (profile summary, week progress, weekly activity aggregates, and today's sessions).
-- Auth: Session cookie required (connect.sid). Frontend must send credentials (fetch: { credentials: 'include' } / axios: { withCredentials: true }).
+- Auth: Session cookie required (connect.sid). Frontend must send credentials
 - Query params: none (server returns data for the authenticated user).
 - Response 200 — shape (example):
 ```json
@@ -129,7 +129,7 @@ GET /api/dashboard
 ### Upcoming
 
 Routes: /api/upcoming
-Auth: Session cookie required (connect.sid). Frontend must send credentials (fetch: { credentials: 'include' } / axios: { withCredentials: true }).
+Auth: Session cookie required (connect.sid). Frontend must send credentials
 All timestamps are ISO 8601 strings. Frontend should convert local datetimes to UTC ISO when sending requests.
 
 GET /api/upcoming
@@ -158,12 +158,12 @@ POST /api/upcoming
 - Body (JSON):
 ```json
 {
-  "name": "Morning Focus",           // optional string or null
-  "start_at": "2025-12-10T09:00:00.000Z", // required, must be a future time (ISO)
-  "end_at": null,                    // should be null for upcoming
-  "tag_id": "existing-tag-uuid",     // OR provide new_tag_name/new_tag_color
-  "new_tag_name": "Deep Work",       // optional: used to create a new tag
-  "new_tag_color": "#00FF00"         // required if new_tag_name provided
+  "name": "Morning Focus",
+  "start_at": "2025-12-10T09:00:00.000Z",
+  "end_at": null,
+  "tag_id": "existing-tag-uuid",
+  "new_tag_name": "Deep Work",
+  "new_tag_color": "#00FF00"
 }
 ```
 - Validations:
@@ -224,5 +224,57 @@ DELETE /api/upcoming/:id
 - Purpose: Delete an upcoming scheduled session. Only SCHEDULED sessions can be removed.
 - Params: id (session id)
 - Response: 204 No Content on success.
+
+### Dashboard
+
+GET /api/dashboard
+- Purpose: Fetch all data needed to render the user's dashboard (profile summary, week progress, weekly activity aggregates, and today's sessions).
+- Auth: Session cookie required (connect.sid). Frontend must send credentials.
+
+```json
+{
+  "status": "success",
+  "data": {
+    "user": {
+      "id": "longstring",
+      "name": "Steve Jobs",
+      "avatar_url": "https://example.com/avatar.png",
+      "timezone": "Australia/Melbourne",
+      "settings": {}
+    },
+    "week_progress": {
+      "scheduled_count": 6,
+      "completed_count": 4
+    },
+    "weekly_activities": [
+      {
+        "date": "2025-11-17",
+        "focus_minutes": 90
+      },
+      {
+        "date": "2025-11-18",
+        "focus_minutes": 45
+      }
+    ],
+    "today": {
+      "date": "2025-11-21T00:00:00.000Z",
+      "sessions": [
+        {
+          "id": "randomstring",
+          "name": "Morning Deep Work",
+          "start_at": "2025-11-21T09:00:00.000Z",
+          "end_at": null,
+          "status": "SCHEDULED",
+          "break_time": 0,
+          "tag": {
+            "id": "tag-random",
+            "name": "Deep Work",
+            "color": "#FF5A5A"
+          }
+        }
+      ]
+    }
+  }
+}
 
 ````
