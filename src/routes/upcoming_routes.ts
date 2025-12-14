@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client/extension";
+import prisma from "../libs/prisma.js";
 import { Router } from "express";
 import type { NextFunction, Request, Response } from "express";
 import type { UserObject } from "../types/api.js";
@@ -6,7 +6,6 @@ import type { CreateUpcomingBody, UpdateUpcomingBody } from "../types/api.js";
 import { AppError } from "../utils/AppError.js";
 import { SessionStatus } from "@prisma/client";
 
-const prisma = PrismaClient();
 const router = Router();
 
 // Extend request to expect a possible user object

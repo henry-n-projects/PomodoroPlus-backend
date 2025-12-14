@@ -1,10 +1,9 @@
-import { PrismaClient } from "@prisma/client";
+import prisma from "../libs/prisma.js";
 import { Router } from "express";
 import type { UserObject } from "../types/api.js";
 import type { NextFunction, Request, Response } from "express";
 import { AppError } from "../utils/AppError.js";
 
-const prisma = new PrismaClient();
 const router = Router();
 
 interface AuthRequest extends Request {

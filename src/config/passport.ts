@@ -1,9 +1,7 @@
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
-import { Prisma, PrismaClient } from "@prisma/client";
-
-// New prisma client -> connection to DB
-const prisma = new PrismaClient();
+import { Prisma } from "@prisma/client";
+import prisma from "../libs/prisma.js";
 
 export const configurePassport = () => {
   // Serialize user ID for the session

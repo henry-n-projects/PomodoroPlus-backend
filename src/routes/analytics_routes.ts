@@ -1,10 +1,9 @@
-import { PrismaClient } from "@prisma/client";
+import prisma from "../libs/prisma.js";
 import Router from "express";
 import type { NextFunction, Request, Response } from "express";
 import type { UserObject } from "../types/api.js";
 import { AppError } from "../utils/AppError.js";
 // Prisma client instance + shared router instance
-const prisma = new PrismaClient();
 const router = Router();
 
 /**

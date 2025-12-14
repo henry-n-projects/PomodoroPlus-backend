@@ -14,7 +14,7 @@ router.get(
   "/google/callback",
   passport.authenticate("google", {
     failureRedirect: "/login",
-    successRedirect: "/", // change
+    successRedirect: `${process.env.FRONTEND_URL}/api/dashboard`, // change
   })
 );
 
