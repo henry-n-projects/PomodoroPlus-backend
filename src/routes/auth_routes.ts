@@ -13,8 +13,8 @@ router.get(
 router.get(
   "/google/callback",
   passport.authenticate("google", {
-    failureRedirect: "/login",
-    successRedirect: `${process.env.FRONTEND_URL}/api/dashboard`, // change
+    failureRedirect: `${process.env.FRONTEND_URL}/`,
+    successRedirect: `${process.env.FRONTEND_URL}/dashboard`,
   })
 );
 
@@ -22,7 +22,7 @@ router.get(
 router.post("/logout", (req, res, next) => {
   req.logOut((err) => {
     if (err) return next(err);
-    res.redirect("/");
+    res.redirect(`${process.env.FRONT_END_URL}/`);
   });
 });
 
