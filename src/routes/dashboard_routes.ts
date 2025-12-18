@@ -3,6 +3,10 @@ import prisma from "../libs/prisma.js";
 import type { NextFunction, Request, Response } from "express";
 import { AppError } from "../utils/AppError.js";
 import type { UserObject } from "../types/api.js";
+import {
+  getUserDayRangeUTC,
+  getUserWeekRangeUTC,
+} from "../utils/dateRanges.js";
 const router = Router();
 
 // Extend request to expect a user object and its properties
@@ -10,37 +14,6 @@ interface AuthRequest extends Request {
   user?: UserObject;
 }
 
-// HELPER: Todays sessions date ranges
-function getDayRange(date: Date) {
-  const start = new Date(date);
-  start.setHours(0, 0, 0, 0); // start of day
-
-  const end = new Date();
-  end.setHours(23, 59, 59, 999); // end of day
-
-  return {
-    start,
-    end,
-  };
-}
-
-// HELPER: This week sessions date ranges
-function getWeekRange(date: Date) {
-  const current = new Date(date);
-
-  const day = current.getDay(); // s0, m1, t2, w3, t4, f5, s6
-  const diffToMonday = (day + 6) % 7; // 0 if monday 1 tuesday, etc
-
-  // Move back ___ days to get Monday of that week
-  const start = new Date(current);
-  start.setDate(current.getDate() - diffToMonday);
-  start.setHours(0, 0, 0, 0);
-
-  // Find end of that week
-  const end = new Date();
-  end.setDate(start.getDate() + 7);
-  return { start, end };
-}
 /**
  * GET 'API/DASHBOARD/'
  *
@@ -54,10 +27,13 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   }
 
   try {
+    const timezone = user.timezone ?? "UTC";
     const now = new Date();
-    const { start: dayStart, end: dayEnd } = getDayRange(now);
-    const { start: weekStart, end: weekEnd } = getWeekRange(now);
-
+    const { start: dayStart, end: dayEnd } = getUserDayRangeUTC(now, timezone);
+    const { start: weekStart, end: weekEnd } = getUserWeekRangeUTC(
+      now,
+      timezone
+    );
     // 1. Find todays sessions
     const getDaySessions = prisma.session.findMany({
       where: {
