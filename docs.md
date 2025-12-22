@@ -4,13 +4,11 @@ Base URL: `http://localhost:3000`
 
 All JSON error responses follow this shape:
 
-````json
+```json
 {
   "status": "error",
   "message": "custom error msg..."
 }
-
-## Health:
 
 GET /health
 Purpose: Check if backend is alive
@@ -20,33 +18,23 @@ Response 200
   "status": "ok"
 }
 
-## Auth:
-
-- Google OAuth:
-
 GET /api/auth/google
 Behaviour: Start Google login
 Purpose: Redirects user to Google login
 Auth: Not required
 Response: 200 redirect to Google
 
-- Google callback:
-
 GET /api/auth/google/callback
 Purpose: Google redirects back here after login
 Auth: Not required (Google handles auth)
 Behavior:
-
-On success:
-Creates/loads user in DB
-Creates session
-Sets a session cookie (connect.sid)
-Redirects to frontend: process.env.FRONTEND_URL
-
-On failure:
-Redirects to /login
-
-- Get current user:
+  On success:
+    Creates/loads user in DB
+    Creates session
+    Sets a session cookie (connect.sid)
+    Redirects to frontend: process.env.FRONTEND_URL
+  On failure:
+    Redirects to /login
 
 GET /api/auth/me
 Purpose: Get the currently logged-in user
@@ -61,63 +49,57 @@ Body:
   "timezone": "UTC",
   "settings": {}
 }
-
 Fail 401
 {
   "error": "Not authenticated"
 }
 
-## Logout:
-
 POST /api/auth/logout
 Purpose: Log out the current user
-Auth: Session cookie required
+Auth: yes
 Success 200
 Behaviour: Redirects to /
 
 
-### Dashboard
-
 GET /api/dashboard
-- Purpose: Fetch all data needed to render the user's dashboard (profile summary, week progress, weekly activity aggregates, and today's sessions).
-- Auth: Session cookie required (connect.sid). Frontend must send credentials
-- Query params: none (server returns data for the authenticated user).
-- Response 200 — shape (example):
-```json
+Method: GET
+Path: /api/dashboard
+Auth: yes
+Response:
 {
   "status": "success",
   "data": {
     "user": {
-      "id": "longstring",
-      "name": "Steve Jobs",
-      "avatar_url": "https://example.com/avatar.png",
-      "timezone": "Australia/Melbourne",
-      "settings": {}
+      "id": "string",
+      "name": "string",
+      "avatar_url": "string | null",
+      "timezone": "string",
+      "settings": "object"
     },
     "week_progress": {
-      "scheduled_count": 6,
-      "completed_count": 4
+      "scheduled_count": "number",
+      "completed_count": "number"
     },
     "weekly_activities": [
       {
-        "date": "2025-11-17",
-        "focus_minutes": 90
+        "date": "string", // "YYYY-MM-DD"
+        "focus_minutes": "number"
       }
     ],
     "today": {
-      "date": "2025-11-21T00:00:00.000Z",
+      "date": "string", // ISO date string for start of day
       "sessions": [
         {
-          "id": "randomstring",
-          "name": "Morning Deep Work",
-          "start_at": "2025-11-21T09:00:00.000Z",
-          "end_at": null,
-          "status": "SCHEDULED",
-          "break_time": 0,
+          "id": "string",
+          "name": "string | null",
+          "start_at": "string", // ISO-8601
+          "end_at": "string | null",
+          "status": "SessionStatus",
+          "break_time": "number",
           "tag": {
-            "id": "randomstring",
-            "name": "Deep Work",
-            "color": "#FF5A5A"
+            "id": "string",
+            "name": "string",
+            "color": "string"
           }
         }
       ]
@@ -126,155 +108,157 @@ GET /api/dashboard
 }
 
 
-### Upcoming
+GET /api/sessions/scheduled
+Method: GET
+Auth: yes
+Response:
+{
+  "status": "success",
+  "data": {
+    "id": "string",
+    "name": "string | null",
+    "start_at": "string",
+    "end_at": "string | null",
+    "status": "SessionStatus",
+    "break_time": "number",
+    "tag": "Tag",
+  }[],
+}
 
-Routes: /api/upcoming
-Auth: Session cookie required (connect.sid). Frontend must send credentials
-All timestamps are ISO 8601 strings. Frontend should convert local datetimes to UTC ISO when sending requests.
-
-GET /api/upcoming
-- Purpose: List future scheduled sessions for the authenticated user.
-- Query params: none
-- Response 200 — example:
-```json
+GET /api/sessions/scheduled
+Method: GET
+Path: /api/sessions/scheduled
+Auth: yes
+Response (200):
 {
   "status": "success",
   "data": [
     {
-      "id": "uuid",
-      "name": "Plan Sprint",
-      "start_at": "2025-12-10T09:00:00.000Z",
-      "end_at": null,
-      "status": "SCHEDULED",
-      "break_time": 0,
-      "tag": { "id": "tag-uuid", "name": "Work", "color": "#FF5A5A" }
+      "id": "string",
+      "name": "string | null",
+      "start_at": "string", // ISO-8601
+      "end_at": "string | null", // ISO-8601 or null
+      "status": "SessionStatus", // "SCHEDULED"
+      "break_time": "number", // total break minutes (usually 0 for upcoming)
+      "tag": {
+        "id": "string",
+        "name": "string",
+        "color": "string"
+      }
     }
   ]
 }
-```
 
-POST /api/upcoming
-- Purpose: Create a new scheduled session (status = SCHEDULED).
-- Body (JSON):
-```json
-{
-  "name": "Morning Focus",
-  "start_at": "2025-12-10T09:00:00.000Z",
-  "end_at": null,
-  "tag_id": "existing-tag-uuid",
-  "new_tag_name": "Deep Work",
-  "new_tag_color": "#00FF00"
-}
-```
-- Validations:
-  - start_at required and must be a valid future ISO timestamp.
-  - If creating a new tag, both new_tag_name and new_tag_color must be provided.
-  - Either tag_id or new_tag_name/new_tag_color must be provided.
-- Response 201 — example:
-```json
+
+POST /api/sessions/:id/start
+Method: POST
+Auth: yes
+Response (200):
 {
   "status": "success",
   "data": {
-    "id": "uuid",
-    "name": "Morning Focus",
-    "start_at": "2025-12-10T09:00:00.000Z",
-    "end_at": null,
-    "status": "SCHEDULED",
-    "break_time": 0,
-    "tag": { "id": "tag-uuid", "name": "Deep Work", "color": "#00FF00" }
+    "id": "string", // session id
+    "status": "IN_PROGRESS", // new status
+    "start_at": "string" // ISO-8601 actual start time
   }
 }
-```
 
-PATCH /api/upcoming/:id
-- Purpose: Partially update a scheduled session. Only sessions with status SCHEDULED can be edited.
-- Params: id (session id)
-- Body (JSON) — any subset:
-```json
-{
-  "name": "Updated name",          // optional; set to null to clear
-  "start_at": "2025-12-11T10:00:00.000Z", // optional; must be a future ISO date
-  "tag_id": "existing-tag-uuid"    // optional; must belong to user
-}
-```
-- Constraints:
-  - end_at cannot be edited (rejects any attempt to set/update).
-  - start_at must be a valid future date if present.
-  - tag_id must belong to the authenticated user.
-  - Only sessions with status SCHEDULED are editable.
-- Response 200 — example:
-```json
+
+POST /api/sessions/:id/stop
+Method: POST
+Auth: yes
+Response (200):
 {
   "status": "success",
   "data": {
     "session": {
-      "id": "uuid",
-      "name": "Updated name",
-      "start_at": "2025-12-11T10:00:00.000Z",
-      "end_at": null,
-      "status": "SCHEDULED",
-      "break_time": 0,
-      "tag": { "id": "tag-uuid", "name": "Work", "color": "#FF5A5A" }
+      "id": "string", // session id
+      "status": "COMPLETED", // new status
+      "start_at": "string", // ISO-8601
+      "end_at": "string | null", // ISO-8601 (stop time)
+      "break_time": "number" // total break minutes
     }
   }
 }
-```
 
-DELETE /api/upcoming/:id
-- Purpose: Delete an upcoming scheduled session. Only SCHEDULED sessions can be removed.
-- Params: id (session id)
-- Response: 204 No Content on success.
 
-### Dashboard
-
-GET /api/dashboard
-- Purpose: Fetch all data needed to render the user's dashboard (profile summary, week progress, weekly activity aggregates, and today's sessions).
-- Auth: Session cookie required (connect.sid). Frontend must send credentials.
-
-```json
+POST /api/sessions/:id/breaks/start
+Method: POST
+Path: /api/sessions/:id/breaks/start
+Auth: yes
+Body:
+{
+  "type": "SHORT | LONG | CUSTOM" // optional, defaults to "CUSTOM" if missing/invalid
+}
+Response (201):
 {
   "status": "success",
   "data": {
-    "user": {
-      "id": "longstring",
-      "name": "Steve Jobs",
-      "avatar_url": "https://example.com/avatar.png",
-      "timezone": "Australia/Melbourne",
-      "settings": {}
+    "break": {
+      "id": "string", // break id
+      "type": "SHORT | LONG | CUSTOM",
+      "start_time": "string", // ISO-8601
+      "end_time": null // always null when just started
+    }
+  }
+}
+
+
+POST /api/sessions/:id/breaks/:breakId/end
+Method: POST
+Auth: yes
+Response (200):
+{
+  "status": "success",
+  "data": {
+    "break": {
+      "id": "string", // break id
+      "start_time": "string", // ISO-8601
+      "end_time": "string | null", // ISO-8601 (end time)
+      "duration_minutes": "number" // this break's duration in minutes
     },
-    "week_progress": {
-      "scheduled_count": 6,
-      "completed_count": 4
-    },
-    "weekly_activities": [
-      {
-        "date": "2025-11-17",
-        "focus_minutes": 90
-      },
-      {
-        "date": "2025-11-18",
-        "focus_minutes": 45
+    "session": {
+      "id": "string", // session id
+      "break_time": "number" // updated total break minutes for the session
+    }
+  }
+}
+
+
+GET /api/sessions/:id
+Method: GET
+Path: /api/sessions/:id
+Auth: yes
+Response (200):
+{
+  "status": "success",
+  "data": {
+    "session": {
+      "id": "string",
+      "name": "string | null",
+      "status": "SessionStatus", // e.g. "SCHEDULED" | "IN_PROGRESS" | "COMPLETED"
+      "start_at": "string", // ISO-8601
+      "end_at": "string | null", // ISO-8601 or null if still running
+      "break_time": "number", // total break minutes stored on session
+      "tag": {
+        "id": "string",
+        "name": "string",
+        "color": "string"
       }
-    ],
-    "today": {
-      "date": "2025-11-21T00:00:00.000Z",
-      "sessions": [
+    },
+    "activity": {
+      "total_minutes": "number", // total duration (end_or_now - start), rounded
+      "focus_minutes": "number", // total_minutes - break_minutes
+      "break_minutes": "number", // sum of all finished breaks (computed)
+      "breaks": [
         {
-          "id": "randomstring",
-          "name": "Morning Deep Work",
-          "start_at": "2025-11-21T09:00:00.000Z",
-          "end_at": null,
-          "status": "SCHEDULED",
-          "break_time": 0,
-          "tag": {
-            "id": "tag-random",
-            "name": "Deep Work",
-            "color": "#FF5A5A"
-          }
+          "id": "string",
+          "type": "string", // "SHORT" | "LONG" | "CUSTOM"
+          "start_time": "string", // ISO-8601
+          "end_time": "string | null" // ISO-8601 or null if still running
         }
       ]
     }
   }
 }
-
-````
+```

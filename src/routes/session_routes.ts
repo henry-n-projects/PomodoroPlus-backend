@@ -388,7 +388,7 @@ router.post(
       // Add to session's total break_time (ensure non-null)
       const newBreakTime = (session.break_time ?? 0) + diffMin;
 
-      const updatedSession = await prisma.session.update({
+      await prisma.session.update({
         where: { id: session.id },
         data: { break_time: newBreakTime },
       });
