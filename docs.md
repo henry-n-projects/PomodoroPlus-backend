@@ -2,9 +2,8 @@
 
 Base URL: `http://localhost:3000`
 
-All JSON error responses follow this shape:
-
 ```json
+Error:
 {
   "status": "error",
   "message": "custom error msg..."
@@ -105,24 +104,6 @@ Response:
       ]
     }
   }
-}
-
-
-GET /api/sessions/scheduled
-Method: GET
-Auth: yes
-Response:
-{
-  "status": "success",
-  "data": {
-    "id": "string",
-    "name": "string | null",
-    "start_at": "string",
-    "end_at": "string | null",
-    "status": "SessionStatus",
-    "break_time": "number",
-    "tag": "Tag",
-  }[],
 }
 
 GET /api/sessions/scheduled
