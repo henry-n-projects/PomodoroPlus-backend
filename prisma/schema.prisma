@@ -25,12 +25,6 @@ enum SessionStatus {
   CANCELLED
 }
 
-enum BreakType {
-  SHORT 
-  LONG 
-  CUSTOM
-}
-
 //
 //Models
 //
@@ -95,7 +89,6 @@ model Distraction {
 model Break {
   id String @id @default(uuid())
   session_id String
-  type String
   start_time DateTime
   end_time DateTime?
 

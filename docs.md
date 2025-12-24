@@ -167,17 +167,12 @@ POST /api/sessions/:id/breaks/start
 Method: POST
 Path: /api/sessions/:id/breaks/start
 Auth: yes
-Body:
-{
-  "type": "SHORT | LONG | CUSTOM" // optional, defaults to "CUSTOM" if missing/invalid
-}
 Response (201):
 {
   "status": "success",
   "data": {
     "break": {
       "id": "string", // break id
-      "type": "SHORT | LONG | CUSTOM",
       "start_time": "string", // ISO-8601
       "end_time": null // always null when just started
     }
@@ -234,7 +229,6 @@ Response (200):
       "breaks": [
         {
           "id": "string",
-          "type": "string", // "SHORT" | "LONG" | "CUSTOM"
           "start_time": "string", // ISO-8601
           "end_time": "string | null" // ISO-8601 or null if still running
         }

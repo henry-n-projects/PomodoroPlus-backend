@@ -187,7 +187,6 @@ router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
       .map((b) => {
         ({
           id: b.id,
-          type: b.type,
           start_time: b.start_time.toISOString(),
           end_time: b.end_time?.toISOString(),
         });

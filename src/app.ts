@@ -50,7 +50,7 @@ app.get("/", (req: express.Request, res: express.Response) => {
 //9. mount all routes
 app.use("/api", routes);
 
-//10. Error handling middleware for middlewares
+//10. Error handling middleware
 app.use(errorHandler);
 
 //11. unmatched routes

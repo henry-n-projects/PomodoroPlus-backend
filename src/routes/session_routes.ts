@@ -277,15 +277,10 @@ router.post(
         );
       }
 
-      // Check for valid type in req
-      const breakType =
-        type && ["SHORT", "LONG", "CUSTOM"].includes(type) ? type : "CUSTOM";
-
       // Create break entry
       const newBreak = await prisma.break.create({
         data: {
           session_id: session.id,
-          type: breakType,
           start_time: now,
           end_time: null,
         },
@@ -297,7 +292,6 @@ router.post(
         data: {
           break: {
             id: newBreak.id,
-            type: newBreak.type,
             start_time: newBreak.start_time.toISOString(),
             end_time: newBreak.end_time,
           },
@@ -501,7 +495,6 @@ router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
             .sort((a, b) => a.start_time.getTime() - b.start_time.getTime())
             .map((b) => ({
               id: b.id,
-              type: b.type,
               start_time: b.start_time.toISOString(),
               end_time: b.end_time ? b.end_time.toISOString() : null,
             })),
