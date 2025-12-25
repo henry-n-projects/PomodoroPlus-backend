@@ -435,6 +435,7 @@ router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
       include: {
         tag: true,
         breaks: true,
+        distractions: true,
       },
     });
 
@@ -466,6 +467,9 @@ router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
       0
     );
 
+    // Calc distraction count
+    const distractionCount = session.distractions.length;
+
     // Return response to client
     return res.status(200).json({
       status: "success",
@@ -494,6 +498,7 @@ router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
               start_time: b.start_time.toISOString(),
               end_time: b.end_time ? b.end_time.toISOString() : null,
             })),
+          distractionCount: distractionCount,
         },
       },
     });
