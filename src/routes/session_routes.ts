@@ -6,8 +6,10 @@ import {
   type Request,
 } from "express";
 import { AppError } from "../utils/AppError.js";
-import type { UserObject } from "../types/api.js";
+import type { CreateDistractionBody, UserObject } from "../types/api.js";
 import { SessionStatus } from "@prisma/client";
+import { appendFile } from "fs";
+import { error } from "console";
 
 const router = Router();
 
@@ -94,7 +96,7 @@ router.post(
     }
 
     try {
-      // 2. Extract session id from url
+      // 2. Extract session id from path
       const id = req.params.id;
 
       if (!id) {
@@ -163,7 +165,7 @@ router.post(
     }
 
     try {
-      // 3. Extract url param
+      // 3. Extract path param
       const { id } = req.params;
 
       const now = new Date();
@@ -235,7 +237,7 @@ router.post(
     }
 
     try {
-      // Extract the url params
+      // Extract the path params
       const { id } = req.params;
 
       if (!id) {
@@ -303,10 +305,7 @@ router.post(
   }
 );
 
-/**
- *
- * POST /API/SESSION/:ID/BREAKS/:BREAKID/END
- *
+/** POST /API/SESSION/:ID/BREAKS/:BREAKID/END
  * update break_end time for a session
  */
 router.post(
@@ -321,7 +320,7 @@ router.post(
     }
 
     try {
-      // Extract session id from url params
+      // Extract session id from path params
       const { id, breakId } = req.params;
       if (!id) {
         return next(new AppError(400, "Session id missing", true));
@@ -408,11 +407,8 @@ router.post(
   }
 );
 
-/**
- * GET API/SESSION/:ID
- *
- * get session activty such as breaks focus time
- */
+//GET get session activty such as breaks focus time
+
 router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
   // Extract user from request
   const { user } = req as AuthRequest;
@@ -422,7 +418,7 @@ router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
     return next(new AppError(401, "Not authenticated", true));
   }
   try {
-    // Extract id from url params
+    // Extract id from path params
     const { id } = req.params;
 
     //Validate that session id exists
@@ -505,4 +501,66 @@ router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
     next(err);
   }
 });
+
+// POST CREATE DISTRACTION
+router.post(
+  "/sessions/:id/distraction",
+  async (req: Request, res: Response, next: NextFunction) => {
+    // 1. Validate user is logged in
+    const { user } = req as AuthRequest;
+    if (!user) {
+      return next(new AppError(401, "Not authenticated", true));
+    }
+    try {
+      // 2. Extract and validate req body
+      const body = req.body as CreateDistractionBody;
+      if (!body.name || !body.name.trim()) {
+        return res.status(400).json({
+          status: "error",
+          message: "Distraction name is missing",
+        });
+      }
+
+      // Extract session id from path
+      const { id } = req.params;
+      if (!id) {
+        return next(new AppError(400, "Session id not missing", true));
+      }
+
+      // 4. Fetch and check if session exists
+      const session = await prisma.session.findFirst({
+        where: {
+          id: id,
+          user_id: user.id,
+        },
+      });
+      if (!session) {
+        return next(new AppError(404, "Session not found", true));
+      }
+      const now = new Date();
+
+      // 5. Create distraction
+      const newDistraction = await prisma.distraction.create({
+        data: {
+          session_id: id,
+          name: body.name.trim(),
+          occured_at: now,
+          created_at: now,
+        },
+      });
+
+      // 6. return response
+      return res.status(201).json({
+        status: "success",
+        data: {
+          session_id: newDistraction.session_id,
+          name: newDistraction.name,
+          ocurred_at: newDistraction.occured_at,
+        },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 export default router;

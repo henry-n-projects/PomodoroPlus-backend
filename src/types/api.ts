@@ -25,3 +25,8 @@ export interface UpdateUpcomingBody {
   end_at: null;
   tag_id?: string;
 }
+
+export interface CreateDistractionBody {
+  session_id: string;
+  name: string;
+}
