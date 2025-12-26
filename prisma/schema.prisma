@@ -78,7 +78,7 @@ model Distraction {
   id String @id @default(uuid())
   session_id String 
   name String
-  occured_at DateTime @default(now())
+  occurred_at DateTime @default(now())
   created_at DateTime @default(now())
 
   //Relations

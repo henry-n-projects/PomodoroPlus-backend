@@ -8,8 +8,6 @@ import {
 import { AppError } from "../utils/AppError.js";
 import type { CreateDistractionBody, UserObject } from "../types/api.js";
 import { SessionStatus } from "@prisma/client";
-import { appendFile } from "fs";
-import { error } from "console";
 
 const router = Router();
 
@@ -244,7 +242,6 @@ router.post(
         return next(new AppError(400, "Session id missing", true));
       }
       const now = new Date();
-      const { type } = req.body as { type?: string };
 
       // Fetch session
       const session = await prisma.session.findFirst({
@@ -273,7 +270,7 @@ router.post(
         },
       });
       // Validate no active break
-      if (!activeBreak) {
+      if (activeBreak) {
         return next(
           new AppError(400, "An active break is already in progress", true)
         );
@@ -329,8 +326,6 @@ router.post(
       if (!breakId) {
         return next(new AppError(400, "Break id missing", true));
       }
-
-      const { type } = req.body as { type?: string }; // e.g. "SHORT" | "LONG" | "CUSTOM"
 
       const now = new Date();
 
@@ -467,9 +462,6 @@ router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
       0
     );
 
-    // Calc distraction count
-    const distractionCount = session.distractions.length;
-
     // Return response to client
     return res.status(200).json({
       status: "success",
@@ -498,7 +490,13 @@ router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
               start_time: b.start_time.toISOString(),
               end_time: b.end_time ? b.end_time.toISOString() : null,
             })),
-          distractionCount: distractionCount,
+          distractions: session.distractions
+            .sort((a, b) => a.occurred_at.getTime() - b.occurred_at.getTime())
+            .map((d) => ({
+              id: d.id,
+              name: d.name,
+              occurred_at: d.occurred_at,
+            })),
         },
       },
     });
@@ -509,7 +507,7 @@ router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
 
 // POST CREATE DISTRACTION
 router.post(
-  "/sessions/:id/distraction",
+  "/:id/distraction",
   async (req: Request, res: Response, next: NextFunction) => {
     // 1. Validate user is logged in
     const { user } = req as AuthRequest;
@@ -549,7 +547,7 @@ router.post(
         data: {
           session_id: id,
           name: body.name.trim(),
-          occured_at: now,
+          occurred_at: now,
           created_at: now,
         },
       });
@@ -560,7 +558,7 @@ router.post(
         data: {
           session_id: newDistraction.session_id,
           name: newDistraction.name,
-          ocurred_at: newDistraction.occured_at,
+          occurred_at: newDistraction.occurred_at,
         },
       });
     } catch (err) {

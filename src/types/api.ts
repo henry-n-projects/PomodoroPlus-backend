@@ -27,6 +27,5 @@ export interface UpdateUpcomingBody {
 }
 
 export interface CreateDistractionBody {
-  session_id: string;
   name: string;
 }
