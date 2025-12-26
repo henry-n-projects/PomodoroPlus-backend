@@ -236,4 +236,55 @@ Response (200):
     }
   }
 }
+
+GET /api/sessions/active
+Method: GET
+Path: /api/sessions/active
+Auth: yes
+Response (200)
+– when no active session:
+{
+  "status": "success",
+  "data": null
+}
+– when an active session exists:
+{
+  "status": "success",
+  "data": {
+    "session": {
+      "id": "string",            // session id
+      "name": "string | null",   // session name
+      "status": "IN_PROGRESS",   // current status
+      "start_at": "string",      // ISO-8601
+      "end_at": "string | null"  // ISO-8601, usually null while active
+    },
+    "tag": {
+      "id": "string",    // tag id
+      "name": "string",  // tag name
+      "color": "string"  // hex color, e.g. "#FF5A5A"
+    },
+    "active_break": {
+      "id": "string",
+      "session_id": "string",
+      "start_time": "string",     // ISO-8601
+      "end_time": "string | null" // ISO-8601, null if still in progress
+    } | "null",
+    "breaks": [
+      {
+        "id": "string",
+        "session_id": "string",
+        "start_time": "string",     // ISO-8601
+        "end_time": "string | null" // ISO-8601
+      }
+    ],
+    "distractions": [
+      {
+        "id": "string",
+        "name": "string",
+        "occurred_at": "string" // ISO-8601
+      }
+    ]
+  }
+}
+
 ```

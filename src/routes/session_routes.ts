@@ -566,4 +566,65 @@ router.post(
     }
   }
 );
+
+router.get(
+  "/active",
+  async (req: Request, res: Response, next: NextFunction) => {
+    //extract user id from req
+    const { user } = req as AuthRequest;
+
+    // Validate that user is logged in
+    if (!user) {
+      return next(new AppError(401, "Not authenticated", true));
+    }
+    try {
+      const session = await prisma.session.findFirst({
+        where: {
+          user_id: user.id,
+          status: "IN_PROGRESS",
+        },
+        include: {
+          tag: true,
+          distractions: true,
+          breaks: true,
+        },
+      });
+      if (!session) {
+        return res.status(200).json({
+          status: "success",
+          data: null,
+        });
+      }
+
+      const activeBreak =
+        session.breaks.find((b) => b.end_time === null) ?? null;
+
+      return res.status(200).json({
+        session: {
+          id: session.id,
+          start_at: session.start_at.toISOString(),
+        },
+        active_break: activeBreak,
+        breaks: session.breaks.map((b) => ({
+          id: b.id,
+          session_id: b.session_id,
+          start_time: b.start_time.toISOString(),
+          end_time: b.end_time ? b.end_time.toISOString() : null,
+        })),
+        tag: {
+          id: session.tag.id,
+          name: session.tag.name,
+          color: session.tag.color,
+        },
+        distractions: session.distractions.map((d) => ({
+          id: d.id,
+          name: d.name,
+          occurred_at: d.occurred_at.toISOString(),
+        })),
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 export default router;
