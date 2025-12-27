@@ -20,7 +20,7 @@ interface AuthRequest extends Request {
  * getscheduled sessions to start from
  */
 router.get(
-  "/scheduled",
+  "/status/scheduled",
   async (req: Request, res: Response, next: NextFunction) => {
     // Store the user from the client response
     const { user } = req as AuthRequest;
@@ -421,6 +421,7 @@ router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
       return next(new AppError(400, "Missing session id", true));
     }
 
+    console.log("sessionId: " + id);
     // Fetch session, tag, breaks
     const session = await prisma.session.findFirst({
       where: {
@@ -436,7 +437,7 @@ router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
 
     // Validate that session exists
     if (!session) {
-      return next(new AppError(404, "Cannot find session", true));
+      return next(new AppError(404, `Cannot find session +`, true));
     }
 
     const now = new Date();
@@ -568,7 +569,7 @@ router.post(
 );
 
 router.get(
-  "/active",
+  "/status/in-progress",
   async (req: Request, res: Response, next: NextFunction) => {
     //extract user id from req
     const { user } = req as AuthRequest;
@@ -589,9 +590,10 @@ router.get(
           breaks: true,
         },
       });
+
       if (!session) {
         return res.status(200).json({
-          status: "success",
+          status: "success no active session",
           data: null,
         });
       }
@@ -600,27 +602,41 @@ router.get(
         session.breaks.find((b) => b.end_time === null) ?? null;
 
       return res.status(200).json({
-        session: {
-          id: session.id,
-          start_at: session.start_at.toISOString(),
+        status: "success",
+        data: {
+          session: {
+            id: session.id,
+            name: session.name,
+            status: session.status,
+            start_at: session.start_at.toISOString(),
+            end_at: session.end_at ? session.end_at.toISOString() : null,
+          },
+          tag: {
+            id: session.tag.id,
+            name: session.tag.name,
+            color: session.tag.color,
+          },
+          active_break: activeBreak
+            ? {
+                id: activeBreak.id,
+                session_id: activeBreak.session_id,
+                start_time: activeBreak.start_time.toISOString(),
+                end_time: activeBreak.end_time
+                  ? activeBreak.end_time.toISOString()
+                  : null,
+              }
+            : null,
+          breaks: session.breaks.map((b) => ({
+            id: b.id,
+            session_id: b.session_id,
+            start_time: b.start_time.toISOString(),
+            end_time: b.end_time ? b.end_time.toISOString() : null,
+          })),
+          distractions: session.distractions.map((d) => ({
+            name: d.name,
+            occurred_at: d.occurred_at.toISOString(), // note schema spelling
+          })),
         },
-        active_break: activeBreak,
-        breaks: session.breaks.map((b) => ({
-          id: b.id,
-          session_id: b.session_id,
-          start_time: b.start_time.toISOString(),
-          end_time: b.end_time ? b.end_time.toISOString() : null,
-        })),
-        tag: {
-          id: session.tag.id,
-          name: session.tag.name,
-          color: session.tag.color,
-        },
-        distractions: session.distractions.map((d) => ({
-          id: d.id,
-          name: d.name,
-          occurred_at: d.occurred_at.toISOString(),
-        })),
       });
     } catch (err) {
       next(err);
