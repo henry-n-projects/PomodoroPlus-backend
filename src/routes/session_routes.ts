@@ -421,7 +421,6 @@ router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
       return next(new AppError(400, "Missing session id", true));
     }
 
-    console.log("sessionId: " + id);
     // Fetch session, tag, breaks
     const session = await prisma.session.findFirst({
       where: {
