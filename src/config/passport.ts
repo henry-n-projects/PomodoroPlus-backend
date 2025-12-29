@@ -1,7 +1,8 @@
-import passport from "passport";
+import passport, { use } from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { Prisma } from "@prisma/client";
 import prisma from "../libs/prisma.js";
+import { Default_Tags } from "../constants/defaultTags.js";
 
 export const configurePassport = () => {
   // Serialize user ID for the session
@@ -35,17 +36,14 @@ export const configurePassport = () => {
         clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
         callbackURL: process.env.GOOGLE_CALLBACK_URL!,
       },
-      async (accessToken, refreshToken, profile, done) => {
+      async (_accessToken, _refreshToken, profile, done) => {
         try {
-          // Find or create user
-          let user = await prisma.user.findUnique({
-            where: { auth_user_id: profile.id },
-          });
-
-          if (!user) {
-            // Create new user if not found
-            user = await prisma.user.create({
-              data: {
+          const user = await prisma.$transaction(async (tx) => {
+            // Create or fetch user (never null)
+            const user = await tx.user.upsert({
+              where: { auth_user_id: profile.id },
+              update: {},
+              create: {
                 auth_user_id: profile.id,
                 name: profile.displayName,
                 avatar_url: profile.photos?.[0]?.value ?? null,
@@ -53,7 +51,20 @@ export const configurePassport = () => {
                 settings: {} as Prisma.JsonObject,
               },
             });
-          }
+
+            // Seed default tags
+            await tx.tag.createMany({
+              data: Default_Tags.map((t) => ({
+                user_id: user.id,
+                name: t.name,
+                color: t.color,
+                created_at: new Date(),
+              })),
+              skipDuplicates: true,
+            });
+
+            return user;
+          });
 
           return done(null, user);
         } catch (error) {
@@ -61,8 +72,5 @@ export const configurePassport = () => {
         }
       }
     )
-
-    // Passport handles log in using google sign in
-    // When user signs in callback method recieves the user profile adds or loads user
   );
 };
