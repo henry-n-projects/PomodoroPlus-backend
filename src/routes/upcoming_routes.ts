@@ -374,4 +374,38 @@ router.delete(
   }
 );
 
+router.get("/tags", async (req: Request, res: Response, next: NextFunction) => {
+  // Extract user from  req
+  const { user } = req as AuthRequest;
+
+  // Validate user is logged in
+  if (!user) {
+    return next(new AppError(401, "Not authenticated", true));
+  }
+
+  try {
+    const tags = await prisma.tag.findMany({
+      where: {
+        user_id: user.id,
+      },
+      orderBy: {
+        created_at: "asc",
+      },
+    });
+
+    return res.status(200).json({
+      status: "success",
+      data: {
+        tags: tags.map((t) => ({
+          id: t.id,
+          name: t.name,
+          color: t.color,
+        })),
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;
