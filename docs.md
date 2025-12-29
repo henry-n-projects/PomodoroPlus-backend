@@ -16,7 +16,7 @@ Response 200
 {
   "status": "ok"
 }
-
+## AUTHENTICATION
 GET /api/auth/google
 Behaviour: Start Google login
 Purpose: Redirects user to Google login
@@ -59,7 +59,7 @@ Auth: yes
 Success 200
 Behaviour: Redirects to /
 
-
+## DASHBOARD ##
 GET /api/dashboard
 Method: GET
 Path: /api/dashboard
@@ -106,6 +106,7 @@ Response:
   }
 }
 
+## SESSIONS
 GET /api/sessions/scheduled
 Method: GET
 Path: /api/sessions/scheduled
@@ -286,4 +287,135 @@ Response (200)
   }
 }
 
+## UPCOMING
+
+GET /api/sessions
+Method: GET
+Auth: yes
+Response (200):
+{
+  "status": "success",
+  "data": [
+    {
+      "id": "string",
+      "name": "string | null",
+      "start_at": "string", // ISO-8601
+      "end_at": "string | null", // ISO-8601
+      "status": "SCHEDULED",
+      "break_time": "number",
+      "tag": {
+        "id": "string",
+        "name": "string",
+        "color": "string"
+      }
+    }
+  ]
+}
+
+POST /api/sessions
+Method: POST
+Auth: yes
+Body:
+{
+  "name": "string | null",
+  "start_at": "string", // ISO-8601 (must be in the future)
+  "end_at": null,
+  "tag_id": "string | null",
+  "new_tag_name": "string | null",
+  "new_tag_color": "string | null"
+}
+Response (201):
+{
+  "status": "success",
+  "data": {
+    "id": "string",
+    "name": "string | null",
+    "start_at": "string",
+    "end_at": "string | null",
+    "status": "SCHEDULED",
+    "break_time": "number",
+    "tag": {
+      "id": "string",
+      "name": "string",
+      "color": "string"
+    }
+  }
+}
+
+PATCH /api/sessions/:id
+Desc: Update a scheduled session
+Method: PATCH
+Auth: yes
+Body (partial):
+{
+  "name": "string | null",
+  "start_at": "string", // ISO-8601 (future date only)
+  "tag_id": "string"
+}
+Response (200):
+{
+  "status": "success",
+  "data": {
+    "session": {
+      "id": "string",
+      "name": "string | null",
+      "start_at": "string",
+      "end_at": "string | null",
+      "status": "SCHEDULED",
+      "break_time": "number",
+      "tag": {
+        "id": "string",
+        "name": "string",
+        "color": "string"
+      }
+    }
+  }
+}
+
+DELETE /api/sessions/:id
+Method: DELETE
+Auth: yes
+Response (204):
+
+GET /api/sessions/tags
+Method: GET
+Auth: yes
+Response (200):
+{
+  "status": "success",
+  "data": {
+    "tags": [
+      {
+        "id": "string",
+        "name": "string",
+        "color": "string"
+      }
+    ]
+  }
+}
+
+POST /api/sessions/tags
+Method: POST
+Auth: yes
+Body:
+{
+  "name": "string",
+  "color": "string"
+}
+Response (201):
+{
+  "status": "success",
+  "data": {
+    "tag": {
+      "id": "string",
+      "name": "string",
+      "color": "string"
+    }
+  }
+}
+Error (409 – duplicate name):
+{
+  "status": "error",
+  "message": "Tag with this name already exists"
+}
 ```

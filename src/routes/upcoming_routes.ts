@@ -4,7 +4,7 @@ import type { NextFunction, Request, Response } from "express";
 import type { UserObject } from "../types/api.js";
 import type { CreateUpcomingBody, UpdateUpcomingBody } from "../types/api.js";
 import { AppError } from "../utils/AppError.js";
-import { SessionStatus } from "@prisma/client";
+import { Prisma, SessionStatus } from "@prisma/client";
 
 const router = Router();
 
@@ -407,5 +407,66 @@ router.get("/tags", async (req: Request, res: Response, next: NextFunction) => {
     next(err);
   }
 });
+
+router.post(
+  "/tags",
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { user } = req as AuthRequest;
+
+    if (!user) {
+      return next(new AppError(401, "Not authenticated", true));
+    }
+
+    try {
+      const { name, color } = req.body as {
+        name?: string;
+        color?: string;
+      };
+
+      // Basic validation
+      if (!name || !name.trim()) {
+        return next(new AppError(400, "Tag name is required", true));
+      }
+
+      if (!color) {
+        return next(new AppError(400, "Tag color is required", true));
+      }
+
+      const trimmedName = name.trim();
+      const now = new Date();
+      const tag = await prisma.tag.create({
+        data: {
+          user_id: user.id,
+          name: trimmedName,
+          color,
+          created_at: now,
+        },
+      });
+
+      return res.status(201).json({
+        status: "success",
+        data: {
+          tag: {
+            id: tag.id,
+            name: tag.name,
+            color: tag.color,
+          },
+        },
+      });
+    } catch (err) {
+      // Handle unique constraint violation (duplicate tag name)
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === "P2002"
+      ) {
+        return next(
+          new AppError(409, "Tag with this name already exists", true)
+        );
+      }
+
+      next(err);
+    }
+  }
+);
 
 export default router;
