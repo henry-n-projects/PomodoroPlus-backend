@@ -633,7 +633,7 @@ router.get(
           })),
           distractions: session.distractions.map((d) => ({
             name: d.name,
-            occurred_at: d.occurred_at.toISOString(), // note schema spelling
+            occurred_at: d.occurred_at.toISOString(),
           })),
         },
       });

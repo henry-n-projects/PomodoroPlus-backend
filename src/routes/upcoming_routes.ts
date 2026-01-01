@@ -14,7 +14,68 @@ interface AuthRequest extends Request {
 }
 
 // GET upcoming -> list of future sessions
-router.get("/", async (req: Request, res: Response, next: NextFunction) => {
+router.get(
+  "/upcoming",
+  async (req: Request, res: Response, next: NextFunction) => {
+    // Extract user from request
+    const { user } = req as AuthRequest;
+
+    // Validate if user is logged in
+    if (!user) {
+      return next(new AppError(401, "Not authenticated", true));
+    }
+
+    try {
+      //Get today's date
+      const now = Date();
+
+      //Fetch sessions with dates greater than today
+      const sessions = await prisma.session.findMany({
+        where: {
+          user_id: user.id,
+          start_at: {
+            gte: now,
+          },
+          status: "SCHEDULED",
+        },
+        include: {
+          tag: true,
+        },
+        orderBy: {
+          start_at: "asc",
+        },
+      });
+
+      if (!sessions) {
+        return next(new AppError(404, "Cannot find sessions", true));
+      }
+
+      const result = sessions.map((s) => ({
+        id: s.id,
+        name: s.name,
+        start_at: s.start_at.toISOString(),
+        end_at: s.end_at ? s.end_at.toISOString() : null,
+        status: s.status,
+        break_time: s.break_time,
+        tag: {
+          id: s.tag.id,
+          name: s.tag.name,
+          color: s.tag.color,
+        },
+      }));
+
+      // Return the result to client
+      return res.status(200).json({
+        status: "success",
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.get("/past", async (req: Request, res: Response, next: NextFunction) => {
   // Extract user from request
   const { user } = req as AuthRequest;
 
@@ -22,19 +83,18 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   if (!user) {
     return next(new AppError(401, "Not authenticated", true));
   }
-
   try {
-    //Get today's date
-    const now = Date();
+    // Todays date
+    const now = new Date();
 
-    //Fetch sessions with dates greater than today
     const sessions = await prisma.session.findMany({
       where: {
         user_id: user.id,
-        start_at: {
-          gte: now,
-        },
         status: "SCHEDULED",
+        start_at: {
+          lt: now,
+        },
+        end_at: null,
       },
       include: {
         tag: true,
@@ -43,7 +103,6 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
         start_at: "asc",
       },
     });
-
     if (!sessions) {
       return next(new AppError(404, "Cannot find sessions", true));
     }
@@ -62,7 +121,6 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
       },
     }));
 
-    // Return the result to client
     return res.status(200).json({
       status: "success",
       data: result,
@@ -292,7 +350,6 @@ router.patch(
       });
 
       //Return response
-
       return res.status(200).json({
         status: "success",
         data: {

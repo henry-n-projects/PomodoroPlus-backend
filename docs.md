@@ -289,7 +289,7 @@ Response (200)
 
 ## UPCOMING
 
-GET /api/sessions
+GET /api/upcoming
 Method: GET
 Auth: yes
 Response (200):
@@ -312,7 +312,7 @@ Response (200):
   ]
 }
 
-POST /api/sessions
+POST /api/upcoming
 Method: POST
 Auth: yes
 Body:
@@ -342,7 +342,7 @@ Response (201):
   }
 }
 
-PATCH /api/sessions/:id
+PATCH /api/upcoming/:id
 Desc: Update a scheduled session
 Method: PATCH
 Auth: yes
@@ -372,12 +372,12 @@ Response (200):
   }
 }
 
-DELETE /api/sessions/:id
+DELETE /api/upcoming/:id
 Method: DELETE
 Auth: yes
 Response (204):
 
-GET /api/sessions/tags
+GET /api/upcoming/tags
 Method: GET
 Auth: yes
 Response (200):
@@ -394,7 +394,7 @@ Response (200):
   }
 }
 
-POST /api/sessions/tags
+POST /api/upcoming/tags
 Method: POST
 Auth: yes
 Body:
