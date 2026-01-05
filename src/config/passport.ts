@@ -1,4 +1,4 @@
-import passport, { use } from "passport";
+import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { Prisma } from "@prisma/client";
 import prisma from "../libs/prisma.js";
