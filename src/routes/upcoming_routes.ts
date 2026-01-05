@@ -235,7 +235,7 @@ router.post(
 
 //PATCH edit scheduled sessions only
 router.patch(
-  "/:id",
+  "/update/:id",
   async (req: Request, res: Response, next: NextFunction) => {
     //Extract user from request
     const { user } = req as AuthRequest;
