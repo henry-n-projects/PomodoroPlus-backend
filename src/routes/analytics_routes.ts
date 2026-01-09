@@ -172,6 +172,25 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
       //save and upate map with aggregator
       byTag.set(key, prev);
     }
+    // ----- NetfocusMins and Break Mins
+    const netFocusMinutes = completedSessions.reduce(
+      (sum, s) => {
+        if (!s.end_at) return sum;
+
+        const durationMinutes =
+          (s.end_at.getTime() - s.start_at.getTime()) / 1000 / 60 -
+          s.break_time;
+        return sum + durationMinutes;
+      },
+
+      0
+    );
+
+    const netBreakMinutes = completedSessions.reduce((sum, s) => {
+      return sum + s.break_time;
+    }, 0);
+
+    const totalFocusMinutes = netFocusMinutes || 1; // avoid divide by 0
 
     // convert map to array for json output
     const timePerTag = Array.from(byTag.entries()).map(([tagId, agg]) => ({
@@ -181,48 +200,63 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
         color: agg.color,
       },
       focus_minutes: agg.minutes,
+      percentage: agg.minutes / totalFocusMinutes,
     }));
 
-    // ----- LIST OF COMPLETED SESSIONS FOR TIMEFRAME
-    // create an array of object with session stats
-    const sessionList = completedSessions.map((s) => {
-      // calculate session duration
-      const durationMinutes =
-        s.end_at && s.start_at
-          ? (s.end_at.getTime() - s.start_at.getTime()) / 1000 / 60
-          : 0;
-      const netMinutes = Math.max(durationMinutes - s.break_time, 0);
+    //---- Focus Trend
+    const focusByDay = new Map<string, number>();
 
-      return {
-        id: s.id,
-        name: s.name,
-        start_at: s.start_at.toISOString(),
-        end_at: s.end_at ? s.end_at.toISOString() : null,
-        status: s.status,
-        net_minutes: netMinutes,
-        break_minutes: s.break_time,
-        tag: {
-          id: s.tag.id,
-          name: s.tag.name,
-          color: s.tag.color,
-        },
-      };
-    });
+    for (const s of completedSessions) {
+      if (!s.end_at) continue;
+
+      const day = toDateKey(s.start_at);
+      const duration =
+        (s.end_at.getTime() - s.start_at.getTime()) / 1000 / 60 - s.break_time;
+
+      focusByDay.set(day, (focusByDay.get(day) ?? 0) + Math.max(duration, 0));
+    }
+
+    const focusTrend: { date: string; focus_minutes: number }[] = [];
+    for (
+      let d = new Date(dayRange.from);
+      d <= dayRange.to;
+      d.setDate(d.getDate() + 1)
+    ) {
+      const key = toDateKey(d);
+      focusTrend.push({
+        date: key,
+        focus_minutes: focusByDay.get(key) ?? 0,
+      });
+    }
 
     return res.status(200).json({
       status: "success",
       data: {
+        summary: {
+          streak,
+          completed_sessions: completedCount,
+          scheduled_sessions: scheduledCount,
+          completed_rate: completionRate,
+          total_minutes: netFocusMinutes,
+        },
+        time_per_tag: timePerTag,
+        planning_realism: {
+          scheduled: scheduledCount,
+          completed: completedCount,
+          completion_rate: completionRate,
+        },
+        focus_efficiency: {
+          focus_minutes: netFocusMinutes,
+          break_minutes: netBreakMinutes,
+          efficiency_rate:
+            netFocusMinutes / (netFocusMinutes + netBreakMinutes),
+        },
+        focus_trend: focusTrend,
         range: {
           from: dayRange.from.toISOString(),
           to: dayRange.to.toISOString(),
           days,
         },
-        streak,
-        completion_rate: completionRate,
-        completed_count: completedCount,
-        scheduled_count: scheduledCount,
-        time_per_tag: timePerTag,
-        sessions: sessionList,
       },
     });
   } catch (err) {

@@ -22,7 +22,7 @@ export interface CreateUpcomingBody {
 export interface UpdateUpcomingBody {
   name?: string;
   start_at?: string;
-  end_at: null;
+  end_at: string | null;
   tag_id?: string;
 }
 
