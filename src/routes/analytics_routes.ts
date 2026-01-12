@@ -10,14 +10,6 @@ const router = Router();
  * GET /api/analytics
  * query params:
  *  - days?: number e.g 7 or 14
- *
- * Returns:
- * - streak : number
- * - completion_rate : number (0-1)
- * - completed_count : number
- * - scheduled_count : number
- * - time_per)tag: Array<{tag: {id, name, color}, focus_minutes}>
- * - sessions: list of completed sessions in range
  */
 
 // Extend request to expect user in request
@@ -51,7 +43,10 @@ function getRangeFromDays(days: number) {
 
 // Helper: normailise Date to yyyy-mm-dd
 function toDateKey(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 router.get("/", async (req: Request, res: Response, next: NextFunction) => {
@@ -72,7 +67,7 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
     const sessions = await prisma.session.findMany({
       where: {
         user_id: user.id,
-        end_at: {
+        start_at: {
           gte: dayRange.from,
           lt: dayRange.to,
         },
@@ -97,7 +92,11 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
 
     // ----- COMPLETION RATE
     const total = completedCount + scheduledCount;
+    console.log(
+      `completed: ${completedCount} scheduled: ${scheduledCount} total: ${total}`
+    );
     const completionRate = total === 0 ? 0 : completedCount / total;
+    console.log(`completedrate: ${completionRate}`);
 
     // ---- STREAK
     // build set of unique dates where user has completed a session
@@ -112,9 +111,10 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
       completedDays.add(key);
     }
 
-    // Define today and earliest date in range
-    const endDay = new Date(dayRange.to); // today
+    // Define yesterday and earliest date in range
+    const endDay = new Date(dayRange.to);
     endDay.setHours(0, 0, 0, 0);
+    endDay.setDate(endDay.getDate() - 1); // yesterday
     const fromDay = new Date(dayRange.from); // earliest date
     fromDay.setHours(0, 0, 0, 0);
 
@@ -203,6 +203,67 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
       percentage: agg.minutes / totalFocusMinutes,
     }));
 
+    //---- Planning realism
+    type DayRealism = {
+      scheduled: number;
+      completed: number;
+    };
+
+    const planningByDay = new Map<string, DayRealism>();
+
+    for (const s of sessions) {
+      const day = toDateKey(s.start_at);
+
+      // if key does not exist yet create new
+      const prev = planningByDay.get(day) ?? {
+        scheduled: 0,
+        completed: 0,
+      };
+
+      // Increment schduled and update to map
+      prev.scheduled += 1;
+      planningByDay.set(day, prev);
+    }
+
+    for (const s of completedSessions) {
+      const day = toDateKey(s.start_at);
+
+      const prev = planningByDay.get(day) ?? {
+        scheduled: 0,
+        completed: 0,
+      };
+
+      prev.completed += 1;
+      planningByDay.set(day, prev);
+    }
+
+    const planningRealismByDay: {
+      day: string;
+      scheduled: number;
+      completed: number;
+    }[] = [];
+
+    for (
+      let d = new Date(dayRange.from);
+      d <= dayRange.to;
+      d.setDate(d.getDate() + 1)
+    ) {
+      const key = toDateKey(d);
+
+      const entry = planningByDay.get(key) ?? {
+        scheduled: 0,
+        completed: 0,
+      };
+
+      planningRealismByDay.push({
+        day: key,
+        scheduled: entry.scheduled,
+        completed: entry.completed,
+      });
+    }
+
+    console.log(planningRealismByDay);
+
     //---- Focus Trend
     const focusByDay = new Map<string, number>();
 
@@ -213,10 +274,13 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
       const duration =
         (s.end_at.getTime() - s.start_at.getTime()) / 1000 / 60 - s.break_time;
 
-      focusByDay.set(day, (focusByDay.get(day) ?? 0) + Math.max(duration, 0));
+      focusByDay.set(
+        day,
+        (focusByDay.get(day) ?? 0) + Math.max(duration / 60, 0)
+      );
     }
 
-    const focusTrend: { date: string; focus_minutes: number }[] = [];
+    const focusTrend: { date: string; focus_hours: number }[] = [];
     for (
       let d = new Date(dayRange.from);
       d <= dayRange.to;
@@ -225,9 +289,10 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
       const key = toDateKey(d);
       focusTrend.push({
         date: key,
-        focus_minutes: focusByDay.get(key) ?? 0,
+        focus_hours: focusByDay.get(key) ?? 0,
       });
     }
+    console.log(completionRate);
 
     return res.status(200).json({
       status: "success",
@@ -240,11 +305,7 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
           total_minutes: netFocusMinutes,
         },
         time_per_tag: timePerTag,
-        planning_realism: {
-          scheduled: scheduledCount,
-          completed: completedCount,
-          completion_rate: completionRate,
-        },
+        planning_realism: planningRealismByDay,
         focus_efficiency: {
           focus_minutes: netFocusMinutes,
           break_minutes: netBreakMinutes,

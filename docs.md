@@ -418,4 +418,60 @@ Error (409 – duplicate name):
   "status": "error",
   "message": "Tag with this name already exists"
 }
+
+## Analytics
+
+GET /api/analytics
+Method: GET
+Auth: yes
+Body:
+{
+  "days": "number (optional, default: 7, max: 90)"
+}
+Response (200)
+{
+  "status": "success",
+  "data": {
+    "summary": {
+      "streak": "number",
+      "completed_sessions": "number",
+      "scheduled_sessions": "number",
+      "completed_rate": "number (0–1)",
+      "total_minutes": "number"
+    },
+    "time_per_tag": [
+      {
+        "tag": {
+          "id": "string",
+          "name": "string",
+          "color": "string"
+        },
+        "focus_minutes": "number",
+        "percentage": "number (0–1)"
+      }
+    ],
+    "planning_realism": {
+      "scheduled": "number",
+      "completed": "number",
+      "completion_rate": "number (0–1)"
+    },
+    "focus_efficiency": {
+      "focus_minutes": "number",
+      "break_minutes": "number",
+      "efficiency_rate": "number (0–1)"
+    },
+    "focus_trend": [
+      {
+        "date": "string (YYYY-MM-DD)",
+        "focus_minutes": "number"
+      }
+    ],
+    "range": {
+      "from": "string (ISO-8601)",
+      "to": "string (ISO-8601)",
+      "days": "number"
+    }
+  }
+}
+
 ```

@@ -198,6 +198,22 @@ router.post(
         },
       });
 
+      // 7. Calculate breka minutes
+      const breaks = await prisma.break.findMany({
+        where: {
+          session_id: session.id,
+        },
+      });
+
+      const breakDuration = breaks.reduce((sum, b) => {
+        // ignore if break is not complete
+        if (!b.end_time) return sum;
+
+        const breakMinutes =
+          b.end_time?.getTime() - b.start_time.getTime() / 1000 / 60;
+        return sum + Math.max(0, Math.ceil(breakMinutes));
+      }, 0);
+
       // 7. Return response to client
       return res.status(200).json({
         status: "success",
@@ -207,7 +223,7 @@ router.post(
             status: updated.status,
             start_at: updated.start_at.toISOString(),
             end_at: updated.end_at?.toISOString() ?? null,
-            break_time: updated.break_time,
+            break_time: breakDuration,
           },
         },
       });
