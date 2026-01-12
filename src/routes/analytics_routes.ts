@@ -92,11 +92,8 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
 
     // ----- COMPLETION RATE
     const total = completedCount + scheduledCount;
-    console.log(
-      `completed: ${completedCount} scheduled: ${scheduledCount} total: ${total}`
-    );
+
     const completionRate = total === 0 ? 0 : completedCount / total;
-    console.log(`completedrate: ${completionRate}`);
 
     // ---- STREAK
     // build set of unique dates where user has completed a session
@@ -262,8 +259,6 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
       });
     }
 
-    console.log(planningRealismByDay);
-
     //---- Focus Trend
     const focusByDay = new Map<string, number>();
 
@@ -274,13 +269,10 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
       const duration =
         (s.end_at.getTime() - s.start_at.getTime()) / 1000 / 60 - s.break_time;
 
-      focusByDay.set(
-        day,
-        (focusByDay.get(day) ?? 0) + Math.max(duration / 60, 0)
-      );
+      focusByDay.set(day, (focusByDay.get(day) ?? 0) + Math.max(duration, 0));
     }
 
-    const focusTrend: { date: string; focus_hours: number }[] = [];
+    const focusTrend: { date: string; focus_minutes: number }[] = [];
     for (
       let d = new Date(dayRange.from);
       d <= dayRange.to;
@@ -289,11 +281,10 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
       const key = toDateKey(d);
       focusTrend.push({
         date: key,
-        focus_hours: focusByDay.get(key) ?? 0,
+        focus_minutes: focusByDay.get(key) ?? 0,
       });
     }
-    console.log(completionRate);
-
+    console.log(focusTrend);
     return res.status(200).json({
       status: "success",
       data: {
