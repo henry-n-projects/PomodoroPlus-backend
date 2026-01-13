@@ -284,7 +284,7 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
         focus_minutes: focusByDay.get(key) ?? 0,
       });
     }
-    console.log(focusTrend);
+
     return res.status(200).json({
       status: "success",
       data: {
