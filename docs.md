@@ -474,4 +474,78 @@ Response (200)
   }
 }
 
+## History
+GET /api/history?days=30&tagId=abc123
+Body:
+{
+  "days": "number",
+  "tagId":"string"
+}
+Response (200)
+{
+  "status": "success",
+  "data": {
+    "range": {
+      "from": "2026-01-01T00:00:00.000Z",
+      "to": "2026-01-30T10:32:11.123Z",
+      "days": 30
+    },
+    "sessions": [
+      {
+        "id": "string",
+        "name": "string",
+        "start_at": "2026-01-10T01:00:00.000Z",
+        "end_at": "2026-01-10T01:25:00.000Z",
+        "focus_minutes": 20,
+        "break_time": 5,
+        "break_count": 1,
+        "distraction_count": 2,
+        "tag": {
+          "id": "string",
+          "name": "Work",
+          "color": "#A3C9E0"
+        }
+      }
+    ]
+  }
+}
+
+GET /api/history/:id
+params:
+GET /api/history/xyz789
+Response (200)
+{
+  "status": "success",
+  "data": {
+    "session": {
+      "id": "string",
+      "name": "string",
+      "status": "COMPLETED",
+      "start_at": "2026-01-10T01:00:00.000Z",
+      "end_at": "2026-01-10T01:25:00.000Z",
+      "tag": {
+        "id": "string",
+        "name": "Work",
+        "color": "#A3C9E0"
+      },
+      "breaks": [
+        {
+          "id": "string",
+          "start_time": "2026-01-10T01:10:00.000Z",
+          "end_time": "2026-01-10T01:15:00.000Z"
+        }
+      ],
+      "distractions": [
+        {
+          "name": "Phone notification"
+        }
+      ]
+    },
+    "metrics": {
+      "focus_minutes": 20,
+      "break_minutes": 5,
+      "break_count": 1
+    }
+  }
+}
 ```
