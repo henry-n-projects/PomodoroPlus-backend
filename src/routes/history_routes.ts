@@ -74,6 +74,8 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
       where,
       include: {
         tag: true,
+        breaks: true,
+        distractions: true,
       },
       orderBy: {
         start_at: "asc",
@@ -81,19 +83,23 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
     });
 
     // Map session into array of objects for list
-    const totalMinutes = 0;
     const list = await session.map((s) => {
+      var focusMinutes = 0;
       if (s.start_at && s.end_at) {
-        const totalMinutes =
-          (s.end_at.getTime() - s.start_at.getTime()) / 1000 / 60;
+        focusMinutes =
+          (s.end_at.getTime() - s.start_at.getTime() - s.break_time) /
+          1000 /
+          60;
       }
       return {
         id: s.id,
         name: s.name,
         start_at: s.start_at,
         end_at: s.end_at,
-        total_minutes: totalMinutes,
+        focus_minutes: focusMinutes,
         break_time: s.break_time,
+        break_count: s.breaks.length,
+        distraction_count: s.distractions.length,
         tag: {
           id: s.tag.id,
           name: s.tag.name,
@@ -148,6 +154,7 @@ router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
       include: {
         tag: true,
         breaks: true,
+        distractions: true,
       },
     });
 
@@ -206,93 +213,23 @@ router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
             name: session.tag.name,
             color: session.tag.color,
           },
+          breaks,
+          distractions: session.distractions.map((d) => {
+            ({
+              name: d.name,
+            });
+          }),
         },
         metrics: {
-          total_minutes: totalSessionMinutes,
           focus_minutes: focusMinutes,
           break_minutes: breakMinutes,
           break_count: session.breaks.length,
         },
-        breaks,
       },
     });
   } catch (err) {
     next(err);
   }
 });
-
-router.delete(
-  "/:id",
-  async (req: Request, res: Response, next: NextFunction) => {
-    // Extract user from request
-    const { user } = req as AuthRequest;
-
-    // Validate user is logged in
-    if (!user) {
-      return next(new AppError(401, "Not authenticated", true));
-    }
-
-    try {
-      // Extract id from url params
-      const { id } = req.params;
-
-      // Ensure id exists
-      if (!id) {
-        return next(new AppError(400, "Session Id not provided", true));
-      }
-
-      // Retrieve session from db
-      const session = await prisma.session.findFirst({
-        where: {
-          id: id,
-          user_id: user.id,
-        },
-        include: {
-          breaks: true,
-          distractions: true,
-        },
-      });
-
-      // Validate session exists
-      if (!session) {
-        return next(new AppError(404, "Session not found", true));
-      }
-
-      // Vadiate session is completed
-      if (session.status !== "COMPLETED") {
-        return next(
-          new AppError(
-            400,
-            "Only completed sessions can be deleted from history",
-            true
-          )
-        );
-      }
-
-      // Delete foreign keys so delete doesnt fail
-      await prisma.break.deleteMany({
-        where: {
-          session_id: id,
-        },
-      });
-
-      await prisma.distraction.deleteMany({
-        where: {
-          session_id: id,
-        },
-      });
-
-      await prisma.session.delete({
-        where: {
-          id: id,
-        },
-      });
-
-      return res.status(204).send();
-    } catch (err) {
-      next(err);
-    }
-  }
-);
 
 export default router;
