@@ -466,7 +466,7 @@ router.get("/tags", async (req: Request, res: Response, next: NextFunction) => {
 });
 
 router.post(
-  "/add/tags",
+  "/add/tag",
   async (req: Request, res: Response, next: NextFunction) => {
     const { user } = req as AuthRequest;
 
@@ -521,6 +521,48 @@ router.post(
         );
       }
 
+      next(err);
+    }
+  }
+);
+
+router.delete(
+  "/delete/tag/:id",
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { user } = req as AuthRequest;
+
+    if (!user) {
+      return next(new AppError(401, "Not authenticated", true));
+    }
+
+    try {
+      const { id } = req.params;
+
+      if (!id) {
+        return next(new AppError(400, "Tag id missing from request", true));
+      }
+
+      const result = await prisma.tag.delete({
+        where: {
+          id,
+          user_id: user.id,
+        },
+      });
+
+      const count = await prisma.session.count({
+        where: { tag_id: id },
+      });
+
+      if (count > 0) {
+        throw new AppError(
+          400,
+          "Cannot delete tag used by existing sessions",
+          true
+        );
+      }
+
+      return res.sendStatus(204);
+    } catch (err) {
       next(err);
     }
   }

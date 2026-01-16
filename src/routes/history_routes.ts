@@ -40,7 +40,6 @@ function getRangeFromDays(days: number) {
  * - tagId : string
  */
 router.get("/", async (req: Request, res: Response, next: NextFunction) => {
-  // Extract user from req
   const { user } = req as AuthRequest;
 
   if (!user) {
@@ -48,13 +47,11 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   }
 
   try {
-    //extract query params
     const days = getDaysFromQuery(req);
     const { to, from } = getRangeFromDays(days);
     const tagId =
       typeof req.query.tagId === "string" ? req.query.tagId : undefined;
 
-    // build db query that contains non optional values
     const where: any = {
       user_id: user.id,
       status: "COMPLETED",
@@ -64,13 +61,11 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
       },
     };
 
-    // If tagId is provided add to where db query
-    if (!tagId) {
-      where.tagId = tagId;
+    if (tagId) {
+      where.tag_id = tagId;
     }
 
-    // Retrieve filtered session
-    const session = await prisma.session.findMany({
+    const sessions = await prisma.session.findMany({
       where,
       include: {
         tag: true,
@@ -82,33 +77,51 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
       },
     });
 
-    // Map session into array of objects for list
-    const list = await session.map((s) => {
-      var focusMinutes = 0;
+    const tags = await prisma.tag.findMany({
+      where: {
+        user_id: user.id,
+      },
+    });
+
+    const list = sessions.map((s) => {
+      let focusMinutes = 0;
+
       if (s.start_at && s.end_at) {
         focusMinutes =
-          (s.end_at.getTime() - s.start_at.getTime() - s.break_time) /
-          1000 /
-          60;
+          (s.end_at.getTime() - s.start_at.getTime()) / 1000 / 60 -
+          s.break_time;
+        focusMinutes = Math.max(focusMinutes, 0);
       }
+
       return {
         id: s.id,
         name: s.name,
-        start_at: s.start_at,
-        end_at: s.end_at,
+        start_at: s.start_at.toISOString(),
+        end_at: s.end_at?.toISOString(),
         focus_minutes: focusMinutes,
         break_time: s.break_time,
         break_count: s.breaks.length,
         distraction_count: s.distractions.length,
-        tag: {
-          id: s.tag.id,
-          name: s.tag.name,
-          color: s.tag.color,
-        },
+        tag: s.tag
+          ? {
+              id: s.tag.id,
+              name: s.tag.name,
+              color: s.tag.color,
+            }
+          : null,
+        distractions: s.distractions.map((d) => ({
+          name: d.name,
+        })),
+        breaks: s.breaks
+          .sort((a, b) => a.start_time.getTime() - b.start_time.getTime())
+          .map((b) => ({
+            id: b.id,
+            start_time: b.start_time.toISOString(),
+            end_time: b.end_time?.toISOString(),
+          })),
       };
     });
 
-    // return response to client
     return res.status(200).json({
       status: "success",
       data: {
@@ -118,113 +131,13 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
           days,
         },
         sessions: list,
-      },
-    });
-  } catch (err) {
-    next(err);
-  }
-});
-
-/**
- * GET/ /API/HISTORY/:id
- *
- * detailed info for a single session
- */
-router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
-  const { user } = req as AuthRequest;
-
-  if (!user) {
-    return next(new AppError(401, "Not authenticated", true));
-  }
-
-  try {
-    // Extract id from url params
-    const { id } = req.params;
-
-    // Validate id is provided
-    if (!id) {
-      return next(new AppError(400, "Session id not provided", true));
-    }
-
-    // Fetch session from db
-    const session = await prisma.session.findFirst({
-      where: {
-        id: id,
-      },
-      include: {
-        tag: true,
-        breaks: true,
-        distractions: true,
-      },
-    });
-
-    //validate session exists
-    if (!session) {
-      return next(new AppError(404, "Session not found", true));
-    }
-
-    // calculate total time,
-    if (!session.end_at) {
-      return next(
-        new AppError(
-          400,
-          "Only sessions that are finished can have details viewed",
-          true
-        )
-      );
-    }
-    const totalSessionMinutes =
-      session.end_at.getTime() - session.start_at.getTime() / 1000 / 60;
-
-    // Calculate total breaks
-    const totalBreakMinutes = session.breaks.reduce((sum, b) => {
-      if (!b.end_time) return sum;
-
-      // calculate break time in min
-      const diffMin =
-        (b.end_time.getTime() - b.start_time.getTime()) / 1000 / 60;
-
-      // Add diff min to sum total, ensure lowest value to add is 0
-      return sum + Math.max(diffMin, 0);
-    }, 0);
-    const breakMinutes = totalBreakMinutes || session.break_time;
-    const focusMinutes = Math.max(totalSessionMinutes - breakMinutes, 0);
-    const breaks = session.breaks
-      .sort((a, b) => a.start_time.getTime() - b.start_time.getTime())
-      .map((b) => {
-        ({
-          id: b.id,
-          start_time: b.start_time.toISOString(),
-          end_time: b.end_time?.toISOString(),
-        });
-      });
-
-    return res.status(200).json({
-      status: "success",
-      data: {
-        session: {
-          id: session.id,
-          name: session.name,
-          status: session.status,
-          start_at: session.start_at.toISOString(),
-          end_at: session.end_at.toISOString(),
-          tag: {
-            id: session.tag.id,
-            name: session.tag.name,
-            color: session.tag.color,
-          },
-          breaks,
-          distractions: session.distractions.map((d) => {
-            ({
-              name: d.name,
-            });
-          }),
-        },
-        metrics: {
-          focus_minutes: focusMinutes,
-          break_minutes: breakMinutes,
-          break_count: session.breaks.length,
-        },
+        tags: tags
+          .filter((t) => t.name)
+          .map((t) => ({
+            id: t.id,
+            name: t.name,
+            color: t.color,
+          })),
       },
     });
   } catch (err) {
