@@ -73,7 +73,7 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
         distractions: true,
       },
       orderBy: {
-        start_at: "asc",
+        start_at: "desc",
       },
     });
 
