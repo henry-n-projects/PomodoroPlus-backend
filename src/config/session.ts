@@ -11,11 +11,12 @@ export const configureSession = () => {
   }
 
   if (!process.env.DATABASE_URL) {
-    throw new Error("");
+    throw new Error("Database URL is required!");
   }
 
   //3. Return session configuration -> creates a session store connected to DB
   return session({
+    proxy: true,
     store: new PgSession({
       conString: process.env.DATABASE_URL,
       tableName: "session",
@@ -29,6 +30,7 @@ export const configureSession = () => {
     cookie: {
       httpOnly: true, // Prevents client-side access to the cookie
       secure: process.env.NODE_ENV === "production", // Requires HTTPS in production
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 24 * 60 * 60 * 1000 * 5, // 5 days
     },
   });
