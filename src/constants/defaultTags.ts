@@ -1,6 +1,6 @@
 export const Default_Tags = [
-  { name: "Work", color: "#aca9e4ff" },
-  { name: "Study", color: "#9fd89fff" },
-  { name: "Exercise", color: "#a7bae4ff" },
-  { name: "Personal", color: "#e99e92ff" },
+  { name: "Work", color: "#e0a3a3" },
+  { name: "Study", color: "#f2cb90" },
+  { name: "Exercise", color: "#efe79a" },
+  { name: "Personal", color: "#a6e0a3" },
 ];
