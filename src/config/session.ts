@@ -29,8 +29,8 @@ export const configureSession = () => {
     saveUninitialized: false,
     cookie: {
       httpOnly: true, // Prevents client-side access to the cookie
-      secure: process.env.NODE_ENV === "production", // Requires HTTPS in production
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      secure: true,
+      sameSite: "none",
       maxAge: 24 * 60 * 60 * 1000 * 5, // 5 days
     },
   });

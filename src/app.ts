@@ -15,13 +15,13 @@ const PgSession = connectPgSimple(session);
 
 //0. Create express app instance
 const app = express();
-
+app.set("trust proxy", 1);
 // 1. Cors to allow frontend to talk to backend
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    origin: process.env.FRONTEND_URL,
     credentials: true,
-  })
+  }),
 );
 
 //2. Middleware to parse JSON bodies
